@@ -15,19 +15,32 @@ env:
   global:
     - CHROMEDRIVER_VERSION=2.25
     - DISPLAY=:99.0
-  matrix:
-    - TESTS=functional
-    - TESTS=functional CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
-    - TESTS=integration
-    - TESTS=integration CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
-#    - TESTS=compatibility WITH_DEVTOOLS_PROXY=false # For debugging purposses
-    - TESTS=compatibility
-    - TESTS=compatibility CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
-    - TESTS=compatibility DTP_UJSON=true
-    - TESTS=compatibility DTP_UVLOOP=true
+#  matrix:
+#    - TESTS=functional
+#    - TESTS=functional CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
+#    - TESTS=integration
+#    - TESTS=integration CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
+##    - TESTS=compatibility WITH_DEVTOOLS_PROXY=false # For debugging purposses
+#    - TESTS=compatibility
+#    - TESTS=compatibility CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
+#    - TESTS=compatibility DTP_UJSON=true
+#    - TESTS=compatibility DTP_UVLOOP=true
 
 matrix:
   fast_finish: true
+  include:
+      - os: osx
+        language: generic
+        env: TESTS=functional
+      - os: osx
+        language: generic
+        env: TESTS=functional CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
+      - os: osx
+        language: generic
+        env: TESTS=integration
+      - os: osx
+        language: generic
+        env: TESTS=integration CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
   allow_failures:
     - python: "3.6-dev"
     - env: TESTS=compatibility # Selenium Chrome tests are unstable. Should be fixed in Selenium 3.0.2 / 3.1.0 release
@@ -43,15 +56,24 @@ matrix:
       env: TESTS=compatibility CHROME_WRAPPER_PATH=devtools/chrome-wrapper.sh DEVTOOLS_PROXY_PATH=dist/linux/devtools-proxy
 
 before_install:
+#  - |
+#      if [[ ${TESTS} != "functional" ]]; then
+#        sudo apt-get -y purge chromium-browser
+#        export CHROME_REVISION=`curl -s http://commondatastorage.googleapis.com/chromium-browser-snapshots/Linux_x64/LAST_CHANGE`
+#        curl -L -O "http://commondatastorage.googleapis.com/chromium-browser-snapshots/Linux_x64/${CHROME_REVISION}/chrome-linux.zip"
+#        unzip chrome-linux.zip
+#        sudo ln -sf $PWD/chrome-linux/chrome-wrapper /usr/local/bin/chrome
+#        curl -L -O "http://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+#        unzip -o chromedriver_linux64.zip -d /tmp/ && chmod +x /tmp/chromedriver && sudo mv /tmp/chromedriver /usr/local/bin/chromedriver
+#      fi
   - |
-      if [[ ${TESTS} != "functional" ]]; then
-        sudo apt-get -y purge chromium-browser
-        export CHROME_REVISION=`curl -s http://commondatastorage.googleapis.com/chromium-browser-snapshots/Linux_x64/LAST_CHANGE`
-        curl -L -O "http://commondatastorage.googleapis.com/chromium-browser-snapshots/Linux_x64/${CHROME_REVISION}/chrome-linux.zip"
-        unzip chrome-linux.zip
-        sudo ln -sf $PWD/chrome-linux/chrome-wrapper /usr/local/bin/chrome
-        curl -L -O "http://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
-        unzip -o chromedriver_linux64.zip -d /tmp/ && chmod +x /tmp/chromedriver && sudo mv /tmp/chromedriver /usr/local/bin/chromedriver
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        brew update
+        brew install chromedriver
+        brew install python3
+        virtualenv venv -p python3
+        source venv/bin/activate
+        brew cask install google-chrome
       fi
 
 install:
@@ -59,8 +81,8 @@ install:
 
 before_script:
   - if [[ ${DEVTOOLS_PROXY_PATH} == "dist/linux/devtools-proxy" ]]; then ./build-standalone.sh; fi
-  - if [[ ${TESTS} == "compatibility" ]]; then git submodule update --init --recursive; fi
-  - sh -e /etc/init.d/xvfb start
+#  - if [[ ${TESTS} == "compatibility" ]]; then git submodule update --init --recursive; fi
+#  - if [[ ${$TRAVIS_OS_NAME} == "linux" ]]; then sh -e /etc/init.d/xvfb start; fi
 
 script:
   - ./run-tests.sh ${TESTS}
